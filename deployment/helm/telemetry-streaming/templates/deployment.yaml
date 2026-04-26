@@ -134,12 +134,9 @@ spec:
       
       volumes:
       - name: data
-        {{- if .Values.persistence.enabled }}
-        persistentVolumeClaim:
-          claimName: {{ include "telemetry-streaming.fullname" . }}-pvc
-        {{- else }}
-        emptyDir: {}
-        {{- end }}
+        configMap:
+          name: {{ include "telemetry-streaming.fullname" . }}-data
+          defaultMode: 0444
       - name: tmp
         emptyDir: {}
       

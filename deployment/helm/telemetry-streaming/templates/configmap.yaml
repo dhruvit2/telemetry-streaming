@@ -26,3 +26,13 @@ data:
     CIRCUIT_BREAKER_THRESHOLD={{ .Values.telemetryStreaming.circuitBreakerThreshold }}
     HEALTH_CHECK_INTERVAL={{ .Values.telemetryStreaming.healthCheckInterval }}
     GRACEFUL_SHUTDOWN_TIMEOUT={{ .Values.telemetryStreaming.gracefulShutdownTimeout }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "telemetry-streaming.fullname" . }}-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "telemetry-streaming.labels" . | nindent 4 }}
+binaryData:
+  data1.csv: {{ .Files.Get "data/data1.csv" | b64enc }}

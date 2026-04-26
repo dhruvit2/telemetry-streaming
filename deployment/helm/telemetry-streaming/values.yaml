@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: telemetry-streaming
+  repository: dhruvit2/telemetry-streaming
   pullPolicy: IfNotPresent
   tag: "1.0.0"
 
@@ -39,11 +39,11 @@ healthPort: 8080
 # Pod resources
 resources:
   limits:
-    cpu: 1000m
-    memory: 1Gi
+    cpu: 100m
+    memory: 100Mi
   requests:
-    cpu: 500m
-    memory: 512Mi
+    cpu: 50m
+    memory: 50Mi
 
 # Autoscaling
 autoscaling:
@@ -108,7 +108,7 @@ csvData:
   # Option 2: Use PersistentVolume
   persistence:
     enabled: false
-    storageClass: "standard"
+    storageClass: "local-path"
     size: 1Gi
     mountPath: /data
 
@@ -161,7 +161,7 @@ readinessProbe:
 # Volume for CSV data
 persistence:
   enabled: true
-  storageClass: "standard"
+  storageClass: "local-path"
   accessMode: ReadOnlyMany
   size: 1Gi
   
