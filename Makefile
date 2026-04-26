@@ -9,7 +9,7 @@ CHART_NAME=telemetry-streaming
 CHART_VERSION?=1.0.0
 
 # Local run configuration
-CSV_FILE_PATH?=newdata.csv
+CSV_FILE_PATH?=data1.csv
 READ_SPEED?=5
 BROKER_ADDRESSES?=localhost:9091
 TOPIC?=telemetry-data
