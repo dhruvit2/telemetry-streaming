@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "telemetry-streaming.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "telemetry-streaming.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "telemetry-streaming.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "telemetry-streaming.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "telemetry-streaming.fullname" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      
+      terminationGracePeriodSeconds: {{ .Values.telemetryStreaming.gracefulShutdownTimeout }}
+      
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        
+        ports:
+        - name: http
+          containerPort: {{ .Values.healthPort }}
+          protocol: TCP
+        
+        env:
+        # Service configuration
+        - name: SERVICE_NAME
+          value: {{ .Values.telemetryStreaming.serviceName | quote }}
+        - name: SERVICE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: HEALTH_PORT
+          value: {{ .Values.healthPort | quote }}
+        - name: LOG_LEVEL
+          value: {{ .Values.telemetryStreaming.logLevel | quote }}
+        
+        # CSV configuration
+        - name: CSV_FILE_PATH
+          value: {{ .Values.telemetryStreaming.csvFilePath | quote }}
+        - name: READ_SPEED
+          value: {{ .Values.telemetryStreaming.readSpeed | quote }}
+        
+        # Message Broker configuration
+        - name: BROKER_ADDRESSES
+          value: {{ index .Values.telemetryStreaming.brokerAddresses 0 | quote }}
+        - name: TOPIC
+          value: {{ .Values.telemetryStreaming.topic | quote }}
+        - name: REPLICATION_FACTOR
+          value: {{ .Values.telemetryStreaming.replicationFactor | quote }}
+        
+        # Producer configuration
+        - name: BATCH_SIZE
+          value: {{ .Values.telemetryStreaming.batchSize | quote }}
+        - name: BATCH_TIMEOUT_MS
+          value: {{ .Values.telemetryStreaming.batchTimeoutMs | quote }}
+        - name: COMPRESSION_TYPE
+          value: {{ .Values.telemetryStreaming.compressionType | quote }}
+        - name: ACKS
+          value: {{ .Values.telemetryStreaming.acks | quote }}
+        
+        # Resilience configuration
+        - name: MAX_RETRIES
+          value: {{ .Values.telemetryStreaming.maxRetries | quote }}
+        - name: RETRY_BACKOFF_MS
+          value: {{ .Values.telemetryStreaming.retryBackoffMs | quote }}
+        - name: CIRCUIT_BREAKER_THRESHOLD
+          value: {{ .Values.telemetryStreaming.circuitBreakerThreshold | quote }}
+        - name: HEALTH_CHECK_INTERVAL
+          value: {{ .Values.telemetryStreaming.healthCheckInterval | quote }}
+        
+        # Shutdown configuration
+        - name: GRACEFUL_SHUTDOWN_TIMEOUT
+          value: {{ .Values.telemetryStreaming.gracefulShutdownTimeout | quote }}
+        
+        # Additional environment variables
+        {{- with .Values.env }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        
+        {{- if .Values.probes.liveness.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          timeoutSeconds: 5
+          failureThreshold: 3
+        {{- end }}
+        
+        {{- if .Values.probes.readiness.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          timeoutSeconds: 5
+          failureThreshold: 3
+        {{- end }}
+        
+        volumeMounts:
+        - name: data
+          mountPath: /data
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+      
+      volumes:
+      - name: data
+        {{- if .Values.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ include "telemetry-streaming.fullname" . }}-pvc
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      - name: tmp
+        emptyDir: {}
+      
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

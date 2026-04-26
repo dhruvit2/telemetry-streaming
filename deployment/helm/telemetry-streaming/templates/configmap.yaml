@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "telemetry-streaming.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "telemetry-streaming.labels" . | nindent 4 }}
+data:
+  # All configuration will be passed as environment variables
+  # This ConfigMap is a placeholder for additional config files if needed
+  app-config: |
+    # Telemetry Streaming Configuration
+    SERVICE_NAME={{ .Values.telemetryStreaming.serviceName }}
+    LOG_LEVEL={{ .Values.telemetryStreaming.logLevel }}
+    CSV_FILE_PATH={{ .Values.telemetryStreaming.csvFilePath }}
+    READ_SPEED={{ .Values.telemetryStreaming.readSpeed }}
+    BROKER_ADDRESSES={{ index .Values.telemetryStreaming.brokerAddresses 0 }}
+    TOPIC={{ .Values.telemetryStreaming.topic }}
+    REPLICATION_FACTOR={{ .Values.telemetryStreaming.replicationFactor }}
+    BATCH_SIZE={{ .Values.telemetryStreaming.batchSize }}
+    BATCH_TIMEOUT_MS={{ .Values.telemetryStreaming.batchTimeoutMs }}
+    COMPRESSION_TYPE={{ .Values.telemetryStreaming.compressionType }}
+    ACKS={{ .Values.telemetryStreaming.acks }}
+    MAX_RETRIES={{ .Values.telemetryStreaming.maxRetries }}
+    RETRY_BACKOFF_MS={{ .Values.telemetryStreaming.retryBackoffMs }}
+    CIRCUIT_BREAKER_THRESHOLD={{ .Values.telemetryStreaming.circuitBreakerThreshold }}
+    HEALTH_CHECK_INTERVAL={{ .Values.telemetryStreaming.healthCheckInterval }}
+    GRACEFUL_SHUTDOWN_TIMEOUT={{ .Values.telemetryStreaming.gracefulShutdownTimeout }}

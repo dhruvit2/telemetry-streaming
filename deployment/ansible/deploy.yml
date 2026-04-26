@@ -1,0 +1,47 @@
+---
+- name: Deploy Telemetry Streaming Service
+  hosts: telemetry_hosts
+  become: yes
+  vars:
+    telemetry_streamer_version: "{{ messagebroker_version | default('1.0.0') }}"
+    telemetry_streamer_user: telemetry
+    telemetry_streamer_home: /home/telemetry
+    telemetry_streamer_data: /var/lib/telemetry
+  
+  pre_tasks:
+    - name: Update system packages
+      package:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "Debian"
+      tags: packages
+    
+    - name: Display deployment info
+      debug:
+        msg: |
+          Deploying Telemetry Streaming Service
+          Service Version: {{ telemetry_streamer_version }}
+          Broker Addresses: {{ broker_addresses | default('localhost:9092') }}
+          Topic: {{ topic | default('telemetry') }}
+          Read Speed: {{ read_speed | default(100) }} msgs/sec
+  
+  roles:
+    - role: install-dependencies
+      tags: dependencies
+    
+    - role: configure-streamer
+      tags: configure
+    
+    - role: deploy-streamer
+      tags: deploy
+    
+    - role: health-check
+      tags: health
+  
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ✓ Telemetry Streaming Service Deployment Complete
+          Service: {{ inventory_hostname }}
+          Status: Ready

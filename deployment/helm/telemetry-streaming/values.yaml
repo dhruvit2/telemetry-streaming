@@ -1,0 +1,157 @@
+replicaCount: 1
+
+image:
+  repository: telemetry-streaming
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# Health check ports
+healthPort: 8080
+
+# Pod resources
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Node affinity
+nodeSelector: {}
+
+# Pod affinity to spread replicas
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - telemetry-streaming
+          topologyKey: kubernetes.io/hostname
+
+# Tolerations
+tolerations: []
+
+# Telemetry Streaming Configuration
+telemetryStreaming:
+  # Service configuration
+  serviceName: telemetry-streamer
+  logLevel: info  # debug, info, warn, error
+  
+  # CSV file configuration
+  csvFilePath: /data/telemetry.csv
+  readSpeed: 100  # messages per second
+  
+  # Message Broker configuration
+  brokerAddresses:
+    - messagebroker:9092  # Connect to message broker service
+  topic: telemetry
+  replicationFactor: 3    # Must match broker configuration
+  
+  # Producer configuration
+  batchSize: 50           # Messages per batch
+  batchTimeoutMs: 1000    # Max time to wait before flushing batch
+  compressionType: snappy # snappy or gzip
+  acks: all               # none, leader, or all
+  
+  # Resilience configuration
+  maxRetries: 5           # Number of retry attempts
+  retryBackoffMs: 100     # Initial backoff in milliseconds
+  circuitBreakerThreshold: 10  # Failures before opening circuit
+  healthCheckInterval: 30  # Health check interval in seconds
+  
+  # Shutdown configuration
+  gracefulShutdownTimeout: 30  # Graceful shutdown timeout in seconds
+
+# Liveness probe
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Volume for CSV data
+persistence:
+  enabled: true
+  storageClass: "standard"
+  accessMode: ReadOnlyMany
+  size: 1Gi
+  
+# CSV data ConfigMap
+csvData:
+  # When true, looks for CSV file mounted from ConfigMap
+  # When false, expects CSV file to be pre-mounted at csvFilePath
+  useConfigMap: false
+  # ConfigMap name containing CSV file (if useConfigMap: true)
+  configMapName: telemetry-data
+
+# Liveness and readiness probe configuration
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 30
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+# For specifying custom environment variables
+env: []
+# Example:
+# - name: CUSTOM_ENV
+#   value: "custom_value"

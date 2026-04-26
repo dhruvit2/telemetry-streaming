@@ -1,0 +1,16 @@
+apiVersion: v2
+name: telemetry-streaming
+description: Fault-tolerant telemetry streaming service that reads CSV files and sends data to message broker
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - telemetry
+  - streaming
+  - csv
+  - kafka
+  - message-broker
+  - fault-tolerant
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com
