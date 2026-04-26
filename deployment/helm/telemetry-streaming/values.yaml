@@ -86,7 +86,7 @@ telemetryStreaming:
   # Message Broker configuration
   brokerAddresses:
     - messagebroker:9092  # Connect to message broker service
-  topic: telemetry
+  topic: telemetry-data
   replicationFactor: 3    # Must match broker configuration
   
   # Producer configuration
@@ -98,6 +98,40 @@ telemetryStreaming:
   # Resilience configuration
   maxRetries: 5           # Number of retry attempts
   retryBackoffMs: 100     # Initial backoff in milliseconds
+
+# CSV Data ConfigMap - mount CSV data from ConfigMap or Volume
+csvData:
+  # Option 1: Use ConfigMap (inline small files)
+  enabled: false
+  data: ""  # CSV content here, or reference existing ConfigMap
+  
+  # Option 2: Use PersistentVolume
+  persistence:
+    enabled: false
+    storageClass: "standard"
+    size: 1Gi
+    mountPath: /data
+
+# Liveliness and Readiness probes
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 2
   circuitBreakerThreshold: 10  # Failures before opening circuit
   healthCheckInterval: 30  # Health check interval in seconds
   
