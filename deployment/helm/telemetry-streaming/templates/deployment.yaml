@@ -32,6 +32,30 @@ spec:
       
       terminationGracePeriodSeconds: {{ .Values.telemetryStreaming.gracefulShutdownTimeout }}
       
+      initContainers:
+      - name: wait-for-data
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+          - |
+            echo "Waiting for CSV file in PVC..."
+            max_attempts=300
+            attempt=0
+            while [ $attempt -lt $max_attempts ]; do
+              if [ -f {{ .Values.telemetryStreaming.csvFilePath }} ]; then
+                echo "CSV file found at {{ .Values.telemetryStreaming.csvFilePath }}"
+                exit 0
+              fi
+              echo "Attempt $((attempt+1))/$max_attempts - File not found yet, waiting..."
+              sleep 2
+              attempt=$((attempt+1))
+            done
+            echo "ERROR: CSV file not found after $max_attempts attempts"
+            exit 1
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      
       containers:
       - name: {{ .Chart.Name }}
         securityContext:
@@ -134,9 +158,12 @@ spec:
       
       volumes:
       - name: data
-        configMap:
-          name: {{ include "telemetry-streaming.fullname" . }}-data
-          defaultMode: 0444
+        {{- if .Values.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ include "telemetry-streaming.fullname" . }}-pvc
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
       - name: tmp
         emptyDir: {}
       
